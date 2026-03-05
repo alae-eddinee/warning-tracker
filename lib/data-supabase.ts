@@ -7,9 +7,39 @@ import { supabase } from './supabase';
 // Re-export CLIENTS_DATA for seeding purposes
 export { CLIENTS_DATA, ENSEIGNES, seedDatabase } from '@/scripts/seed';
 
+// Simple in-memory cache
+const cache = new Map<string, { data: unknown; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+function getCacheKey(prefix: string, id?: string): string {
+  return id ? `${prefix}:${id}` : prefix;
+}
+
+function getCached<T>(key: string): T | null {
+  const cached = cache.get(key);
+  if (!cached) return null;
+  if (Date.now() - cached.timestamp > CACHE_TTL) {
+    cache.delete(key);
+    return null;
+  }
+  return cached.data as T;
+}
+
+function setCache<T>(key: string, data: T): void {
+  cache.set(key, { data, timestamp: Date.now() });
+}
+
+function clearCache(): void {
+  cache.clear();
+}
+
 // ==================== Enseignes ====================
 
 export async function getEnseignes(): Promise<Enseigne[]> {
+  const cacheKey = getCacheKey('enseignes');
+  const cached = getCached<Enseigne[]>(cacheKey);
+  if (cached) return cached;
+
   const { data, error } = await supabase
     .from('enseignes')
     .select('*')
@@ -20,10 +50,13 @@ export async function getEnseignes(): Promise<Enseigne[]> {
     return [];
   }
 
-  return data?.map(e => ({
+  const result = data?.map(e => ({
     id: e.id,
     name: e.name,
   })) || [];
+
+  setCache(cacheKey, result);
+  return result;
 }
 
 export async function getEnseigneById(id: string): Promise<Enseigne | undefined> {
@@ -44,6 +77,10 @@ export async function getEnseigneById(id: string): Promise<Enseigne | undefined>
 // ==================== Stores ====================
 
 export async function getStores(): Promise<Store[]> {
+  const cacheKey = getCacheKey('stores');
+  const cached = getCached<Store[]>(cacheKey);
+  if (cached) return cached;
+
   const { data, error } = await supabase
     .from('stores')
     .select('*')
@@ -54,7 +91,7 @@ export async function getStores(): Promise<Store[]> {
     return [];
   }
 
-  return data?.map(s => ({
+  const result = data?.map(s => ({
     id: s.id,
     name: s.name,
     enseigneId: s.enseigne_id,
@@ -62,9 +99,16 @@ export async function getStores(): Promise<Store[]> {
     redCount: s.red_count,
     isBlocked: s.is_blocked,
   })) || [];
+
+  setCache(cacheKey, result);
+  return result;
 }
 
 export async function getStoresByEnseigne(enseigneId: string): Promise<Store[]> {
+  const cacheKey = getCacheKey('stores', enseigneId);
+  const cached = getCached<Store[]>(cacheKey);
+  if (cached) return cached;
+
   const { data, error } = await supabase
     .from('stores')
     .select('*')
@@ -76,7 +120,7 @@ export async function getStoresByEnseigne(enseigneId: string): Promise<Store[]> 
     return [];
   }
 
-  return data?.map(s => ({
+  const result = data?.map(s => ({
     id: s.id,
     name: s.name,
     enseigneId: s.enseigne_id,
@@ -84,9 +128,16 @@ export async function getStoresByEnseigne(enseigneId: string): Promise<Store[]> 
     redCount: s.red_count,
     isBlocked: s.is_blocked,
   })) || [];
+
+  setCache(cacheKey, result);
+  return result;
 }
 
 export async function getStoreById(id: string): Promise<Store | undefined> {
+  const cacheKey = getCacheKey('store', id);
+  const cached = getCached<Store>(cacheKey);
+  if (cached) return cached;
+
   const { data, error } = await supabase
     .from('stores')
     .select('*')
@@ -95,7 +146,7 @@ export async function getStoreById(id: string): Promise<Store | undefined> {
 
   if (error || !data) return undefined;
 
-  return {
+  const result = {
     id: data.id,
     name: data.name,
     enseigneId: data.enseigne_id,
@@ -103,6 +154,9 @@ export async function getStoreById(id: string): Promise<Store | undefined> {
     redCount: data.red_count,
     isBlocked: data.is_blocked,
   };
+
+  setCache(cacheKey, result);
+  return result;
 }
 
 export async function searchStores(query: string, enseigneId?: string): Promise<Store[]> {
@@ -205,6 +259,11 @@ export async function addWarning(
     return null;
   }
 
+  // Clear cache so store counts refresh
+  cache.delete(getCacheKey('stores'));
+  cache.delete(getCacheKey('stores', storeId));
+  cache.delete(getCacheKey('store', storeId));
+
   return {
     id: data.id,
     storeId: data.store_id,
@@ -247,6 +306,44 @@ export async function updateWarning(
 }
 
 export async function removeWarning(warningId: string): Promise<boolean> {
+  // First get the warning to know which store to clear cache for and if it has an image
+  const { data: warning } = await supabase
+    .from('warnings')
+    .select('store_id, image_url')
+    .eq('id', warningId)
+    .single();
+
+  // Delete image from storage if exists
+  if (warning?.image_url) {
+    try {
+      // Extract path after the bucket name from URL
+      const url = new URL(warning.image_url);
+      const pathParts = url.pathname.split('/');
+      
+      // Find 'warning-images' in the path and get everything after it
+      const bucketIndex = pathParts.indexOf('warning-images');
+      let filePath: string;
+      
+      if (bucketIndex >= 0 && bucketIndex < pathParts.length - 1) {
+        filePath = pathParts.slice(bucketIndex + 1).join('/');
+      } else {
+        filePath = pathParts.pop() || '';
+      }
+      
+      if (filePath) {
+        const { error: removeError } = await supabase.storage
+          .from('warning-images')
+          .remove([filePath]);
+        
+        if (removeError) {
+          console.error('Error removing image:', removeError);
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing or deleting image URL:', e);
+    }
+  }
+
   const { error } = await supabase
     .from('warnings')
     .delete()
@@ -255,6 +352,13 @@ export async function removeWarning(warningId: string): Promise<boolean> {
   if (error) {
     console.error('Error removing warning:', error);
     return false;
+  }
+
+  // Clear cache so store counts refresh
+  if (warning) {
+    cache.delete(getCacheKey('stores'));
+    cache.delete(getCacheKey('stores', warning.store_id));
+    cache.delete(getCacheKey('store', warning.store_id));
   }
 
   return true;
@@ -362,6 +466,8 @@ export function subscribeToStores(callback: (stores: Store[]) => void) {
       'postgres_changes',
       { event: '*', schema: 'public', table: 'stores' },
       async () => {
+        // Clear cache and fetch fresh data
+        cache.delete(getCacheKey('stores'));
         const stores = await getStores();
         callback(stores);
       }

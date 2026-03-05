@@ -1,20 +1,34 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useRouter } from 'next/navigation';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { EnseigneCard } from '@/components/enseigne-card';
-import { Building2, Store, AlertTriangle, Ban, Search, StoreIcon } from 'lucide-react';
+import { StoreCard } from '@/components/store-card';
+import { Building2, Store, AlertTriangle, Ban, Search, LogOut, Settings } from 'lucide-react';
+import { useAuth } from './auth-provider';
 import Link from 'next/link';
 
 interface DashboardContentProps {
   enseignes: { id: string; name: string }[];
   stores: { id: string; name: string; enseigneId: string; yellowCount: number; redCount: number; isBlocked: boolean }[];
   stats: { totalStores: number; blockedStores: number; totalYellowCards: number; totalRedCards: number };
+  onRefresh: () => void;
 }
 
-export function DashboardContent({ enseignes, stores, stats }: DashboardContentProps) {
+export function DashboardContent({ enseignes, stores, stats, onRefresh }: DashboardContentProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [filter, setFilter] = useState<'all' | 'yellow' | 'red'>('all');
+  const router = useRouter();
+  const { signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+    router.push('/login');
+    router.refresh();
+  };
 
   // Calculate stats for each enseigne
   const enseigneStats = useMemo(() => {
@@ -33,137 +47,180 @@ export function DashboardContent({ enseignes, stores, stats }: DashboardContentP
     );
   }, [enseignes, stores, searchQuery]);
 
+  // Filter stores based on selected filter
+  const filteredStores = useMemo(() => {
+    return stores.filter(s => {
+      if (filter === 'yellow') return s.yellowCount > 0;
+      if (filter === 'red') return s.redCount > 0;
+      return true;
+    }).filter(s => 
+      searchQuery === '' || s.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [stores, filter, searchQuery]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5">
-        <div className="container mx-auto px-4 py-8">
+      <header className="border-b">
+        <div className="container mx-auto px-4 py-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-                  <StoreIcon className="h-5 w-5 text-primary" />
-                </div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                  Warning Tracker
-                </h1>
-              </div>
-              <p className="text-muted-foreground">
-                Système de gestion des avertissements magasins
+              <h1 className="text-2xl font-bold">Warning Tracker</h1>
+              <p className="text-muted-foreground text-sm">
+                Gestion des avertissements magasins
               </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link href="/manage">
+                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Gérer
+                </Button>
+              </Link>
+              <Button variant="outline" size="sm" onClick={handleLogout} className="flex items-center gap-2">
+                <LogOut className="h-4 w-4" />
+                Déconnexion
+              </Button>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Enseignes</CardTitle>
-              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+      <main className="container mx-auto px-4 py-4">
+        {/* Stats Overview with Filters */}
+        <div className="space-y-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Card className="border-l-4 border-l-blue-500">
+              <CardContent className="p-3 flex items-center gap-2">
                 <Building2 className="h-4 w-4 text-blue-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-gray-900">{enseignes.length}</div>
-              <p className="text-xs text-gray-500">Groupes de magasins</p>
-            </CardContent>
-          </Card>
+                <div>
+                  <p className="text-xl font-bold">{enseignes.length}</p>
+                  <p className="text-xs text-gray-500">Enseignes</p>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="border-l-4 border-l-purple-500 hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Magasins</CardTitle>
-              <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+            <Card className="border-l-4 border-l-purple-500">
+              <CardContent className="p-3 flex items-center gap-2">
                 <Store className="h-4 w-4 text-purple-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-gray-900">{stats.totalStores}</div>
-              <p className="text-xs text-gray-500">
-                {stats.blockedStores > 0 ? (
-                  <span className="text-red-600 font-medium">{stats.blockedStores} bloqués</span>
-                ) : (
-                  'Tous actifs'
-                )}
-              </p>
-            </CardContent>
-          </Card>
+                <div>
+                  <p className="text-xl font-bold">{stats.totalStores}</p>
+                  <p className="text-xs text-gray-500">Magasins</p>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="border-l-4 border-l-yellow-500 hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Cartes Jaunes</CardTitle>
-              <div className="w-8 h-8 rounded-lg bg-yellow-100 flex items-center justify-center">
-                <AlertTriangle className="h-4 w-4 text-yellow-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-yellow-600">{stats.totalYellowCards}</div>
-              <p className="text-xs text-gray-500">Avertissements actifs</p>
-            </CardContent>
-          </Card>
+            <button 
+              onClick={() => setFilter(filter === 'yellow' ? 'all' : 'yellow')}
+              className="text-left"
+            >
+              <Card className={`border-l-4 border-l-yellow-500 cursor-pointer transition-colors ${filter === 'yellow' ? 'bg-yellow-50 ring-2 ring-yellow-400' : 'hover:bg-yellow-50/50'}`}>
+                <CardContent className="p-3 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                  <div>
+                    <p className="text-xl font-bold">{stats.totalYellowCards}</p>
+                    <p className="text-xs text-gray-500">Cartons Jaunes</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </button>
 
-          <Card className="border-l-4 border-l-red-500 hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Cartes Rouges</CardTitle>
-              <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
-                <Ban className="h-4 w-4 text-red-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-red-600">{stats.totalRedCards}</div>
-              <p className="text-xs text-gray-500">Magasins bloqués</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Search Bar */}
-        <div className="mb-6">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Rechercher une enseigne..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-12 text-base rounded-xl border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
+            <button 
+              onClick={() => setFilter(filter === 'red' ? 'all' : 'red')}
+              className="text-left"
+            >
+              <Card className={`border-l-4 border-l-red-500 cursor-pointer transition-colors ${filter === 'red' ? 'bg-red-50 ring-2 ring-red-400' : 'hover:bg-red-50/50'}`}>
+                <CardContent className="p-3 flex items-center gap-2">
+                  <Ban className="h-4 w-4 text-red-600" />
+                  <div>
+                    <p className="text-xl font-bold">{stats.totalRedCards}</p>
+                    <p className="text-xs text-gray-500">Cartons Rouges</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </button>
           </div>
-        </div>
 
-        {/* Enseigne Cards Grid */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Enseignes</h2>
-              <p className="text-muted-foreground mt-1">
-                {searchQuery ? `${enseigneStats.length} résultat(s)` : 'Cliquez sur une enseigne pour voir ses magasins'}
+          {/* Filter indicator */}
+          {filter !== 'all' && (
+            <div className="flex items-center justify-between bg-muted p-3 rounded-lg">
+              <p className="text-sm font-medium">
+                Filtré: Magasins avec {filter === 'yellow' ? 'cartons jaunes' : 'cartons rouges'} ({filteredStores.length})
               </p>
-            </div>
-          </div>
-          
-          {enseigneStats.length === 0 ? (
-            <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-              <Search className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg">Aucune enseigne trouvée</p>
-              <p className="text-gray-400 text-sm">Essayez une autre recherche</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {enseigneStats.map(({ enseigne, storeCount, blockedCount, yellowCount, redCount }) => (
-                <EnseigneCard
-                  key={enseigne.id}
-                  enseigne={enseigne}
-                  storeCount={storeCount}
-                  blockedCount={blockedCount}
-                  yellowCount={yellowCount}
-                  redCount={redCount}
-                />
-              ))}
+              <Button variant="ghost" size="sm" onClick={() => setFilter('all')}>
+                Réinitialiser
+              </Button>
             </div>
           )}
         </div>
+
+        {/* Content based on filter */}
+        {filter === 'all' ? (
+          <>
+            {/* Search */}
+            <div className="relative mb-6">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Rechercher une enseigne..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Enseignes Grid */}
+            {enseigneStats.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {enseigneStats.map(({ enseigne, storeCount, blockedCount, yellowCount, redCount }) => (
+                  <EnseigneCard
+                    key={enseigne.id}
+                    enseigne={enseigne}
+                    storeCount={storeCount}
+                    blockedCount={blockedCount}
+                    yellowCount={yellowCount}
+                    redCount={redCount}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                {searchQuery ? 'Aucune enseigne trouvée' : 'Aucune enseigne'}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {/* Search for stores */}
+            <div className="relative mb-6">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Input
+                type="text"
+                placeholder={`Rechercher un magasin avec ${filter === 'yellow' ? 'cartons jaunes' : 'cartons rouges'}...`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Filtered Stores Grid */}
+            {filteredStores.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredStores.map((store) => (
+                  <StoreCard
+                    key={store.id}
+                    store={store}
+                    enseigneName={enseignes.find(e => e.id === store.enseigneId)?.name || 'Unknown'}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                {searchQuery ? 'Aucun magasin trouvé' : `Aucun magasin avec ${filter === 'yellow' ? 'cartons jaunes' : 'cartons rouges'}`}
+              </div>
+            )}
+          </>
+        )}
       </main>
     </div>
   );
