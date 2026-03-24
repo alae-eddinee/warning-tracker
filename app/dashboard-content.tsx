@@ -37,7 +37,6 @@ export function DashboardContent({ enseignes, stores, stats, onRefresh }: Dashbo
       return {
         enseigne,
         storeCount: enseigneStores.length,
-        blockedCount: enseigneStores.filter(s => s.isBlocked).length,
         yellowCount: enseigneStores.reduce((sum, s) => sum + s.yellowCount, 0),
         redCount: enseigneStores.reduce((sum, s) => sum + s.redCount, 0),
       };
@@ -172,12 +171,11 @@ export function DashboardContent({ enseignes, stores, stats, onRefresh }: Dashbo
             {/* Enseignes Grid */}
             {enseigneStats.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {enseigneStats.map(({ enseigne, storeCount, blockedCount, yellowCount, redCount }) => (
+                {enseigneStats.map(({ enseigne, storeCount, yellowCount, redCount }) => (
                   <EnseigneCard
                     key={enseigne.id}
                     enseigne={enseigne}
                     storeCount={storeCount}
-                    blockedCount={blockedCount}
                     yellowCount={yellowCount}
                     redCount={redCount}
                   />

@@ -74,10 +74,6 @@ export function WarningManager({ store, enseigneName, onUpdate }: WarningManager
   const [selectedWarning, setSelectedWarning] = useState<Warning | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  // Check if store has red card - no more warnings allowed
-  const hasRedCard = store.redCount > 0 || store.isBlocked;
-  const canAddWarning = !hasRedCard;
-
   const handleAddWarning = async (type: 'yellow' | 'red') => {
     if (!newComment.trim()) return;
     
@@ -178,91 +174,77 @@ export function WarningManager({ store, enseigneName, onUpdate }: WarningManager
               </div>
             </div>
           </div>
-          {store.isBlocked && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-700 font-medium">
-                Ce magasin est bloqué et n&apos;accepte plus de retours.
-              </p>
-            </div>
-          )}
         </CardContent>
       </Card>
 
       {/* Add Warning Dialog */}
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Historique des Avertissements</h3>
-        {canAddWarning ? (
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Ajouter un Avertissement
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Ajouter un Avertissement</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 mt-4">
-                <div>
-                  <Label htmlFor="comment">Commentaire</Label>
-                  <Textarea
-                    id="comment"
-                    placeholder="Décrire le problème de retour..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    className="mt-2"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="image">Image (optionnel)</Label>
-                  <div className="mt-2 flex items-center gap-4">
-                    <Input
-                      id="image"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="flex-1"
-                    />
-                    {selectedImagePreview && (
-                      <div className="relative">
-                        <img
-                          src={selectedImagePreview}
-                          alt="Preview"
-                          className="h-16 w-16 object-cover rounded"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex gap-3 pt-4">
-                  <Button
-                    onClick={() => handleAddWarning('yellow')}
-                    disabled={!newComment.trim() || isUploading}
-                    className="flex-1 bg-yellow-500 hover:bg-yellow-600"
-                  >
-                    <AlertTriangle className="h-4 w-4 mr-2" />
-                    {isUploading ? 'Chargement...' : 'Carte Jaune'}
-                  </Button>
-                  <Button
-                    onClick={() => handleAddWarning('red')}
-                    disabled={!newComment.trim() || isUploading}
-                    variant="destructive"
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Ajouter un Avertissement
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Ajouter un Avertissement</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div>
+                <Label htmlFor="comment">Commentaire</Label>
+                <Textarea
+                  id="comment"
+                  placeholder="Décrire le problème de retour..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="image">Image (optionnel)</Label>
+                <div className="mt-2 flex items-center gap-4">
+                  <Input
+                    id="image"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
                     className="flex-1"
-                  >
-                    <Ban className="h-4 w-4 mr-2" />
-                    {isUploading ? 'Chargement...' : 'Carte Rouge'}
-                  </Button>
+                  />
+                  {selectedImagePreview && (
+                    <div className="relative">
+                      <img
+                        src={selectedImagePreview}
+                        alt="Preview"
+                        className="h-16 w-16 object-cover rounded"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
-            </DialogContent>
-          </Dialog>
-        ) : (
-          <div className="flex items-center gap-2 text-red-600 bg-red-50 px-4 py-2 rounded-lg">
-            <Ban className="h-4 w-4" />
-            <span className="text-sm font-medium">Ajout désactivé - Carte rouge présente</span>
-          </div>
-        )}
+              <div className="flex gap-3 pt-4">
+                <Button
+                  onClick={() => handleAddWarning('yellow')}
+                  disabled={!newComment.trim() || isUploading}
+                  className="flex-1 bg-yellow-500 hover:bg-yellow-600"
+                >
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  {isUploading ? 'Chargement...' : 'Carte Jaune'}
+                </Button>
+                <Button
+                  onClick={() => handleAddWarning('red')}
+                  disabled={!newComment.trim() || isUploading}
+                  variant="destructive"
+                  className="flex-1"
+                >
+                  <Ban className="h-4 w-4 mr-2" />
+                  {isUploading ? 'Chargement...' : 'Carte Rouge'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Warning History */}

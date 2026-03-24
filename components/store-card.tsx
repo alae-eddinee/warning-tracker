@@ -2,7 +2,6 @@
 
 import { Store } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Ban, MapPin, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
@@ -20,16 +19,14 @@ export function StoreCard({ store, enseigneName, compact = false }: StoreCardPro
       <Card className={`
         transition-all duration-200 cursor-pointer
         border-l-4 hover:shadow-md
-        ${store.isBlocked ? 'border-l-red-500 bg-red-50/20' : 
-          totalWarnings > 0 ? 'border-l-yellow-500 bg-yellow-50/20' : 'border-l-green-500 bg-green-50/20'}
+        ${totalWarnings > 0 ? 'border-l-yellow-500 bg-yellow-50/20' : 'border-l-green-500 bg-green-50/20'}
       `}>
         <CardContent className={compact ? "p-3" : "p-4"}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <div className={`
                 w-8 h-8 rounded flex items-center justify-center flex-shrink-0
-                ${store.isBlocked ? 'bg-red-100 text-red-600' : 
-                  totalWarnings > 0 ? 'bg-yellow-100 text-yellow-600' : 'bg-green-100 text-green-600'}
+                ${totalWarnings > 0 ? 'bg-yellow-100 text-yellow-600' : 'bg-green-100 text-green-600'}
               `}>
                 <MapPin className="h-4 w-4" />
               </div>
@@ -44,12 +41,6 @@ export function StoreCard({ store, enseigneName, compact = false }: StoreCardPro
             </div>
             
             <div className="flex items-center gap-2">
-              {store.isBlocked && (
-                <Badge variant="destructive" className="text-xs px-2 py-0.5 h-5">
-                  Bloqué
-                </Badge>
-              )}
-              
               <div className="flex items-center gap-1 text-xs">
                 {store.yellowCount > 0 && (
                   <span className="flex items-center gap-0.5 text-yellow-600 bg-yellow-100 px-1.5 py-0.5 rounded">
