@@ -216,7 +216,13 @@ export async function getWarnings(): Promise<Warning[]> {
 export async function getStoreWarnings(storeId: string): Promise<Warning[]> {
   const { data, error } = await supabase
     .from('warnings')
-    .select('*')
+    .select(`
+      *,
+      warning_images (
+        id,
+        image_url
+      )
+    `)
     .eq('store_id', storeId)
     .order('created_at', { ascending: false });
 
@@ -231,6 +237,7 @@ export async function getStoreWarnings(storeId: string): Promise<Warning[]> {
     type: w.type as 'yellow' | 'red',
     comment: w.comment,
     imageUrl: w.image_url,
+    imageUrls: w.warning_images?.map((img: { image_url: string }) => img.image_url) || [],
     createdAt: w.created_at,
     createdBy: w.created_by,
   })) || [];
@@ -240,7 +247,7 @@ export async function addWarning(
   storeId: string,
   type: 'yellow' | 'red',
   comment: string,
-  imageUrl?: string
+  imageUrls: string[] = []
 ): Promise<Warning | null> {
   const { data, error } = await supabase
     .from('warnings')
@@ -248,7 +255,6 @@ export async function addWarning(
       store_id: storeId,
       type,
       comment,
-      image_url: imageUrl,
       created_by: 'Admin',
     })
     .select()
@@ -257,6 +263,22 @@ export async function addWarning(
   if (error) {
     console.error('Error adding warning:', error);
     return null;
+  }
+
+  // Insert images into warning_images table
+  if (imageUrls.length > 0) {
+    const imageRecords = imageUrls.map(url => ({
+      warning_id: data.id,
+      image_url: url,
+    }));
+    
+    const { error: imageError } = await supabase
+      .from('warning_images')
+      .insert(imageRecords);
+    
+    if (imageError) {
+      console.error('Error adding warning images:', imageError);
+    }
   }
 
   // Clear cache so store counts refresh
@@ -269,7 +291,7 @@ export async function addWarning(
     storeId: data.store_id,
     type: data.type as 'yellow' | 'red',
     comment: data.comment,
-    imageUrl: data.image_url,
+    imageUrls,
     createdAt: data.created_at,
     createdBy: data.created_by,
   };
@@ -306,44 +328,46 @@ export async function updateWarning(
 }
 
 export async function removeWarning(warningId: string): Promise<boolean> {
-  // First get the warning to know which store to clear cache for and if it has an image
+  // First get the warning to know which store to clear cache for
   const { data: warning } = await supabase
     .from('warnings')
-    .select('store_id, image_url')
+    .select('store_id')
     .eq('id', warningId)
     .single();
 
-  // Delete image from storage if exists
-  if (warning?.image_url) {
-    try {
-      // Extract path after the bucket name from URL
-      const url = new URL(warning.image_url);
-      const pathParts = url.pathname.split('/');
-      
-      // Find 'warning-images' in the path and get everything after it
-      const bucketIndex = pathParts.indexOf('warning-images');
-      let filePath: string;
-      
-      if (bucketIndex >= 0 && bucketIndex < pathParts.length - 1) {
-        filePath = pathParts.slice(bucketIndex + 1).join('/');
-      } else {
-        filePath = pathParts.pop() || '';
-      }
-      
-      if (filePath) {
-        const { error: removeError } = await supabase.storage
-          .from('warning-images')
-          .remove([filePath]);
+  // Get all images for this warning
+  const { data: images } = await supabase
+    .from('warning_images')
+    .select('image_url')
+    .eq('warning_id', warningId);
+
+  // Delete images from storage
+  if (images && images.length > 0) {
+    for (const img of images) {
+      try {
+        const url = new URL(img.image_url);
+        const pathParts = url.pathname.split('/');
+        const bucketIndex = pathParts.indexOf('warning-images');
+        let filePath: string;
         
-        if (removeError) {
-          console.error('Error removing image:', removeError);
+        if (bucketIndex >= 0 && bucketIndex < pathParts.length - 1) {
+          filePath = pathParts.slice(bucketIndex + 1).join('/');
+        } else {
+          filePath = pathParts.pop() || '';
         }
+        
+        if (filePath) {
+          await supabase.storage
+            .from('warning-images')
+            .remove([filePath]);
+        }
+      } catch (e) {
+        console.error('Error deleting image:', e);
       }
-    } catch (e) {
-      console.error('Error parsing or deleting image URL:', e);
     }
   }
 
+  // Delete warning (cascade will delete warning_images)
   const { error } = await supabase
     .from('warnings')
     .delete()

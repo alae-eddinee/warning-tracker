@@ -66,8 +66,8 @@ export function WarningManager({ store, enseigneName, onUpdate }: WarningManager
     setIsLoading(false);
   };
   const [newComment, setNewComment] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedImagePreviews, setSelectedImagePreviews] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
   const [isUploading, setIsUploading] = useState(false);
@@ -78,19 +78,20 @@ export function WarningManager({ store, enseigneName, onUpdate }: WarningManager
     if (!newComment.trim()) return;
     
     setIsUploading(true);
-    let imageUrl: string | undefined;
+    const imageUrls: string[] = [];
     
-    if (selectedFile) {
-      const uploadedUrl = await uploadWarningImage(selectedFile);
+    // Upload all selected images
+    for (const file of selectedFiles) {
+      const uploadedUrl = await uploadWarningImage(file);
       if (uploadedUrl) {
-        imageUrl = uploadedUrl;
+        imageUrls.push(uploadedUrl);
       }
     }
     
-    await addWarning(store.id, type, newComment, imageUrl);
+    await addWarning(store.id, type, newComment, imageUrls);
     setNewComment('');
-    setSelectedFile(null);
-    setSelectedImagePreview(null);
+    setSelectedFiles([]);
+    setSelectedImagePreviews([]);
     setIsUploading(false);
     await loadWarnings();
     onUpdate?.();
@@ -115,15 +116,27 @@ export function WarningManager({ store, enseigneName, onUpdate }: WarningManager
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSelectedImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const newFiles = Array.from(files);
+      setSelectedFiles(prev => [...prev, ...newFiles]);
+      
+      // Create previews for new files
+      newFiles.forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setSelectedImagePreviews(prev => [...prev, reader.result as string]);
+        };
+        reader.readAsDataURL(file);
+      });
     }
+    // Reset input so same file can be selected again
+    e.target.value = '';
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setSelectedImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const filteredWarnings = warnings.filter(w => {
@@ -203,25 +216,37 @@ export function WarningManager({ store, enseigneName, onUpdate }: WarningManager
                 />
               </div>
               <div>
-                <Label htmlFor="image">Image (optionnel)</Label>
-                <div className="mt-2 flex items-center gap-4">
+                <Label htmlFor="images">Images (optionnel - plusieurs possibles)</Label>
+                <div className="mt-2">
                   <Input
-                    id="image"
+                    id="images"
                     type="file"
                     accept="image/*"
+                    multiple
                     onChange={handleImageChange}
                     className="flex-1"
                   />
-                  {selectedImagePreview && (
-                    <div className="relative">
-                      <img
-                        src={selectedImagePreview}
-                        alt="Preview"
-                        className="h-16 w-16 object-cover rounded"
-                      />
-                    </div>
-                  )}
                 </div>
+                {selectedImagePreviews.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {selectedImagePreviews.map((preview, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={preview}
+                          alt={`Preview ${index + 1}`}
+                          className="h-16 w-16 object-cover rounded"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(index)}
+                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="flex gap-3 pt-4">
                 <Button
@@ -300,10 +325,10 @@ export function WarningManager({ store, enseigneName, onUpdate }: WarningManager
                           <span className="text-xs text-muted-foreground">par {warning.createdBy}</span>
                         </div>
                         <p className="text-sm line-clamp-2">{warning.comment}</p>
-                        {warning.imageUrl && (
+                        {(warning.imageUrl || (warning.imageUrls && warning.imageUrls.length > 0)) && (
                           <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
                             <ImageIcon className="h-4 w-4" />
-                            <span>Image jointe</span>
+                            <span>{warning.imageUrls?.length || 1} image(s) jointe(s)</span>
                           </div>
                         )}
                       </div>

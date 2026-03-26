@@ -17,7 +17,8 @@ export interface Warning {
   storeId: string;
   type: 'yellow' | 'red';
   comment: string;
-  imageUrl?: string;
+  imageUrl?: string; // Deprecated: kept for backward compatibility
+  imageUrls?: string[]; // New: multiple images per warning
   createdAt: string;
   createdBy: string;
 }

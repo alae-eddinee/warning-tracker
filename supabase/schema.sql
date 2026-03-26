@@ -66,6 +66,17 @@ CREATE TRIGGER trigger_warning_deleted
     FOR EACH ROW
     EXECUTE FUNCTION handle_warning_deleted();
 
+-- Warning Images Table (for multiple images per warning)
+CREATE TABLE IF NOT EXISTS warning_images (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    warning_id UUID REFERENCES warnings(id) ON DELETE CASCADE,
+    image_url TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Index for faster queries
+CREATE INDEX IF NOT EXISTS idx_warning_images_warning_id ON warning_images(warning_id);
+
 -- Reset all stores (keep is_blocked false by default)
 UPDATE stores SET yellow_count = 0, red_count = 0, is_blocked = false;
 
