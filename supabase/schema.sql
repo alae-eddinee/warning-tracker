@@ -77,6 +77,72 @@ CREATE TABLE IF NOT EXISTS warning_images (
 -- Index for faster queries
 CREATE INDEX IF NOT EXISTS idx_warning_images_warning_id ON warning_images(warning_id);
 
+-- ============================================
+-- ROW LEVEL SECURITY (RLS) POLICIES
+-- ============================================
+
+-- Enable RLS on all tables
+ALTER TABLE enseignes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE warnings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE warning_images ENABLE ROW LEVEL SECURITY;
+
+-- Enseignes: Allow all operations for authenticated users
+CREATE POLICY "Allow all operations for authenticated users" ON enseignes
+    FOR ALL
+    TO authenticated
+    USING (true)
+    WITH CHECK (true);
+
+-- Enseignes: Allow read for anon (public access)
+CREATE POLICY "Allow read for anon" ON enseignes
+    FOR SELECT
+    TO anon
+    USING (true);
+
+-- Stores: Allow all operations for authenticated users
+CREATE POLICY "Allow all operations for authenticated users" ON stores
+    FOR ALL
+    TO authenticated
+    USING (true)
+    WITH CHECK (true);
+
+-- Stores: Allow read for anon
+CREATE POLICY "Allow read for anon" ON stores
+    FOR SELECT
+    TO anon
+    USING (true);
+
+-- Warnings: Allow all operations for authenticated users
+CREATE POLICY "Allow all operations for authenticated users" ON warnings
+    FOR ALL
+    TO authenticated
+    USING (true)
+    WITH CHECK (true);
+
+-- Warnings: Allow read for anon
+CREATE POLICY "Allow read for anon" ON warnings
+    FOR SELECT
+    TO anon
+    USING (true);
+
+-- Warning Images: Allow all operations for authenticated users
+CREATE POLICY "Allow all operations for authenticated users" ON warning_images
+    FOR ALL
+    TO authenticated
+    USING (true)
+    WITH CHECK (true);
+
+-- Warning Images: Allow read for anon
+CREATE POLICY "Allow read for anon" ON warning_images
+    FOR SELECT
+    TO anon
+    USING (true);
+
+-- Storage bucket RLS (for warning-images bucket)
+-- Note: Storage policies are managed via Supabase Dashboard or Storage API
+-- The bucket should be set to public read, authenticated write
+
 -- Reset all stores (keep is_blocked false by default)
 UPDATE stores SET yellow_count = 0, red_count = 0, is_blocked = false;
 
