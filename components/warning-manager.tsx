@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertTriangle, Ban, Plus, Trash2, ImageIcon, Pencil } from 'lucide-react';
 import { addWarning, removeWarning, updateWarning, getStoreWarnings, uploadWarningImage, subscribeToWarnings, subscribeToStores } from '@/lib/data';
@@ -203,6 +203,9 @@ export function WarningManager({ store, enseigneName, onUpdate }: WarningManager
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Ajouter un Avertissement</DialogTitle>
+              <DialogDescription className="sr-only">
+                Formulaire pour ajouter un nouvel avertissement au magasin
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 mt-4">
               <div>

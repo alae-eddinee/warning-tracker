@@ -2,7 +2,7 @@
 
 import { Warning } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Ban, Download, X, Calendar, User, MessageSquare, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
@@ -62,6 +62,9 @@ export function WarningDetail({ warning, isOpen, onClose, storeName }: WarningDe
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="sr-only">Détails de l&apos;avertissement</DialogTitle>
+          <DialogDescription className="sr-only">
+            Détails complets de l&apos;avertissement sélectionné
+          </DialogDescription>
           <div className="flex items-center gap-3">
             <Badge
               variant={warning.type === 'yellow' ? 'default' : 'destructive'}

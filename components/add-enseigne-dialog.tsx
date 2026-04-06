@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -56,6 +57,9 @@ export function AddEnseigneDialog({ onEnseigneAdded }: AddEnseigneDialogProps) {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Nouvelle Enseigne</DialogTitle>
+          <DialogDescription className="sr-only">
+            Formulaire pour créer une nouvelle enseigne
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="space-y-2">

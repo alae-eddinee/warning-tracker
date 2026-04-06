@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -64,6 +65,9 @@ export function AddStoreDialog({ enseigneId, enseigneName, onStoreAdded }: AddSt
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Nouveau Magasin - {enseigneName}</DialogTitle>
+          <DialogDescription className="sr-only">
+            Formulaire pour créer un nouveau magasin pour {enseigneName}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="space-y-2">
