@@ -31,6 +31,13 @@ export function WarningDetail({ warning, isOpen, onClose, storeName }: WarningDe
 
   // Get all images (from new imageUrls array or fallback to legacy imageUrl)
   const images = warning.imageUrls?.length ? warning.imageUrls : (warning.imageUrl ? [warning.imageUrl] : []);
+  
+  console.log('WarningDetail debug:', { 
+    warningId: warning.id, 
+    imageUrls: warning.imageUrls, 
+    imageUrl: warning.imageUrl, 
+    images 
+  });
 
   const handleDownload = async (imageUrl: string) => {
     try {

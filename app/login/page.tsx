@@ -17,18 +17,27 @@ export default function LoginPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const router = useRouter();
 
-  // Check if already logged in
+  // Check if already logged in - only once on mount
   useEffect(() => {
     const checkSession = async () => {
+      // Check if we recently redirected to avoid loop
+      const lastRedirect = sessionStorage.getItem('login_redirect_time');
+      const now = Date.now();
+      if (lastRedirect && now - parseInt(lastRedirect) < 2000) {
+        setCheckingAuth(false);
+        return;
+      }
+      
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        sessionStorage.setItem('login_redirect_time', now.toString());
         router.push('/');
       } else {
         setCheckingAuth(false);
       }
     };
     checkSession();
-  }, [router]);
+  }, []); // Empty deps - only run once
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
