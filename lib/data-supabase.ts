@@ -226,8 +226,39 @@ export async function getStoreWarnings(storeId: string): Promise<Warning[]> {
     .eq('store_id', storeId)
     .order('created_at', { ascending: false });
 
+  console.log('getStoreWarnings raw:', { storeId, data, error, firstWarning: data?.[0], firstWarningImages: data?.[0]?.warning_images });
+
   if (error) {
     console.error('Error fetching store warnings:', error);
+    return [];
+  }
+
+  return data?.map(w => ({
+    id: w.id,
+    storeId: w.store_id,
+    type: w.type as 'yellow' | 'red',
+    comment: w.comment,
+    imageUrl: w.image_url,
+    imageUrls: w.warning_images?.map((img: { image_url: string }) => img.image_url) || [],
+    createdAt: w.created_at,
+    createdBy: w.created_by,
+  })) || [];
+}
+
+export async function getAllWarningsWithImages(): Promise<Warning[]> {
+  const { data, error } = await supabase
+    .from('warnings')
+    .select(`
+      *,
+      warning_images (
+        id,
+        image_url
+      )
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching all warnings with images:', error);
     return [];
   }
 

@@ -15,6 +15,7 @@ export {
   // Warnings
   getWarnings,
   getStoreWarnings,
+  getAllWarningsWithImages,
   addWarning,
   updateWarning,
   removeWarning,

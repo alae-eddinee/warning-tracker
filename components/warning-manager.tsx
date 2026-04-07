@@ -10,9 +10,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertTriangle, Ban, Plus, Trash2, ImageIcon, Pencil } from 'lucide-react';
+import { AlertTriangle, Ban, Plus, Trash2, ImageIcon, Pencil, FileDown } from 'lucide-react';
 import { addWarning, removeWarning, updateWarning, getStoreWarnings, uploadWarningImage, subscribeToWarnings, subscribeToStores } from '@/lib/data';
 import { WarningDetail } from './warning-detail';
+import { exportWarningsToExcel } from '@/lib/export';
 
 // Format date to show only date without time
 function formatDate(dateString: string): string {
@@ -73,6 +74,7 @@ export function WarningManager({ store, enseigneName, onUpdate }: WarningManager
   const [isUploading, setIsUploading] = useState(false);
   const [selectedWarning, setSelectedWarning] = useState<Warning | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const handleAddWarning = async (type: 'yellow' | 'red') => {
     if (!newComment.trim()) return;
@@ -108,6 +110,12 @@ export function WarningManager({ store, enseigneName, onUpdate }: WarningManager
     await updateWarning(warningId, { comment: newComment });
     await loadWarnings();
     onUpdate?.();
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    await exportWarningsToExcel(warnings, store, enseigneName);
+    setIsExporting(false);
   };
 
   const handleViewWarning = (warning: Warning) => {
@@ -193,7 +201,17 @@ export function WarningManager({ store, enseigneName, onUpdate }: WarningManager
       {/* Add Warning Dialog */}
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Historique des Avertissements</h3>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={isExporting || warnings.length === 0}
+            className="flex items-center gap-2"
+          >
+            <FileDown className="h-4 w-4" />
+            {isExporting ? 'Export en cours...' : 'Exporter Excel'}
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
@@ -273,6 +291,7 @@ export function WarningManager({ store, enseigneName, onUpdate }: WarningManager
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Warning History */}

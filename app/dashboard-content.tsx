@@ -7,9 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { EnseigneCard } from '@/components/enseigne-card';
 import { StoreCard } from '@/components/store-card';
-import { Building2, Store, AlertTriangle, Ban, Search, LogOut, Settings } from 'lucide-react';
+import { Building2, Store, AlertTriangle, Ban, Search, LogOut, Settings, FileDown } from 'lucide-react';
 import { useAuth } from './auth-provider';
 import Link from 'next/link';
+import { getAllWarningsWithImages } from '@/lib/data';
+import { exportAllWarningsToExcel } from '@/lib/export';
 
 interface DashboardContentProps {
   enseignes: { id: string; name: string }[];
@@ -21,8 +23,16 @@ interface DashboardContentProps {
 export function DashboardContent({ enseignes, stores, stats, onRefresh }: DashboardContentProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'yellow' | 'red'>('all');
+  const [isExporting, setIsExporting] = useState(false);
   const router = useRouter();
   const { signOut } = useAuth();
+
+  const handleExportAll = async () => {
+    setIsExporting(true);
+    const warnings = await getAllWarningsWithImages();
+    await exportAllWarningsToExcel(warnings, stores, enseignes);
+    setIsExporting(false);
+  };
 
   const handleLogout = async () => {
     await signOut();
@@ -70,6 +80,16 @@ export function DashboardContent({ enseignes, stores, stats, onRefresh }: Dashbo
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportAll}
+                disabled={isExporting}
+                className="flex items-center gap-2"
+              >
+                <FileDown className="h-4 w-4" />
+                {isExporting ? 'Export en cours...' : 'Exporter Excel'}
+              </Button>
               <Link href="/manage">
                 <Button variant="outline" size="sm" className="flex items-center gap-2">
                   <Settings className="h-4 w-4" />
